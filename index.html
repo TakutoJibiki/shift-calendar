@@ -197,6 +197,7 @@
   }
 
   .day-cell{
+    position:relative;
     min-height:64px;
     border:1px solid var(--line);
     border-left:3px solid var(--line);
@@ -210,6 +211,21 @@
     font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;
     color:var(--ink-soft);
   }
+  .day-cell .done-badge{
+    display:none;
+    position:absolute;
+    top:3px;right:3px;
+    font-size:8.5px;font-weight:700;
+    line-height:1;
+    color:var(--ink-soft);
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:1.5px 3.5px;
+  }
+  .day-cell.exported .done-badge{display:inline-block;}
+  .day-cell.exported select{opacity:.6;}
+  .day-cell.exported .num{opacity:.6;}
   .day-cell.today .num{
     color:var(--accent-ink);
     background:var(--accent);
@@ -392,6 +408,7 @@
   </div>
 
   <button class="ghost" id="copyBtn" type="button" style="margin-top:10px;">うまく開けないときは内容をコピー(予備の方法)</button>
+  <button class="ghost" id="clearDoneBtn" type="button" style="margin-top:8px;">済のシフトを消去</button>
   <p class="empty-note" id="eventCountNote" style="margin-top:8px;"></p>
 </section>
 
@@ -402,6 +419,7 @@
   "use strict";
 
   var ASSIGN_KEY = 'shiftcal_assignments_v1';
+  var EXPORTED_KEY = 'shiftcal_exported_v1';
   var VIEW_KEY = 'shiftcal_view_v1';
 
   /* この一覧を変えれば表示・カレンダーの選択肢・書き出し内容すべてに反映されます。 */
@@ -426,12 +444,14 @@
   }
 
   var assignments = safeGet(ASSIGN_KEY, null) || {};
+  var exportedMap = safeGet(EXPORTED_KEY, null) || {};
   var view = safeGet(VIEW_KEY, null);
   var today = new Date();
   var curYear = (view && view.y) || today.getFullYear();
   var curMonth = (view && view.m) || (today.getMonth() + 1);
 
   function saveAssignments(){ safeSet(ASSIGN_KEY, assignments); }
+  function saveExported(){ safeSet(EXPORTED_KEY, exportedMap); }
   function saveView(){ safeSet(VIEW_KEY, {y:curYear, m:curMonth}); }
 
   function pad2(n){ return String(n).padStart(2,'0'); }
@@ -516,6 +536,11 @@
       num.textContent = String(d);
       cell.appendChild(num);
 
+      var badge = document.createElement('span');
+      badge.className = 'done-badge';
+      badge.textContent = '済';
+      cell.appendChild(badge);
+
       var select = document.createElement('select');
       select.id = 'day-' + key;
       var noneOpt = document.createElement('option');
@@ -531,23 +556,26 @@
       (function(key, cell, select){
         select.addEventListener('change', function(){
           if(select.value){ assignments[key] = select.value; } else { delete assignments[key]; }
-          saveAssignments();
-          applyCellTint(cell, select.value);
+          delete exportedMap[key];
+          saveAssignments(); saveExported();
+          applyCellTint(cell, key, select.value);
           renderSummary();
         });
       })(key, cell, select);
 
       cell.appendChild(select);
-      applyCellTint(cell, select.value);
+      applyCellTint(cell, key, select.value);
       dayGrid.appendChild(cell);
     }
   }
 
-  function applyCellTint(cell, typeId){
+  function applyCellTint(cell, key, typeId){
     var t = typeId ? typeById(typeId) : null;
+    var isDone = !!(typeId && exportedMap[key]);
+    cell.classList.toggle('exported', isDone);
     if(t){
-      cell.style.background = hexToRgba(t.color, 0.16);
-      cell.style.borderLeftColor = t.color;
+      cell.style.background = hexToRgba(t.color, isDone ? 0.07 : 0.16);
+      cell.style.borderLeftColor = isDone ? 'var(--line)' : t.color;
     } else {
       cell.style.background = 'var(--surface-alt)';
       cell.style.borderLeftColor = 'var(--line)';
@@ -606,7 +634,11 @@
   function updateEventCountNote(){
     var note = document.getElementById('eventCountNote');
     var n = Object.keys(assignments).length;
-    note.textContent = n > 0 ? ('全期間で ' + n + ' 件のシフトが登録されています') : '全期間でまだシフトが登録されていません';
+    var pendingN = getPendingKeys().length;
+    var doneN = n - pendingN;
+    note.textContent = n > 0
+      ? ('未書き出し ' + pendingN + ' 件 / 書き出し済み ' + doneN + ' 件')
+      : '全期間でまだシフトが登録されていません';
   }
 
   /* ---------------- device tabs ---------------- */
@@ -636,7 +668,11 @@
       pad2(n.getUTCHours()) + pad2(n.getUTCMinutes()) + pad2(n.getUTCSeconds()) + 'Z';
   }
 
-  function buildICS(){
+  function getPendingKeys(){
+    return Object.keys(assignments).filter(function(k){ return !exportedMap[k]; }).sort();
+  }
+
+  function buildICS(keys){
     var lines = [];
     lines.push('BEGIN:VCALENDAR');
     lines.push('VERSION:2.0');
@@ -653,7 +689,7 @@
     lines.push('END:STANDARD');
     lines.push('END:VTIMEZONE');
 
-    var keys = Object.keys(assignments).sort();
+    keys = keys.slice().sort();
     var dtstamp = stamp();
 
     keys.forEach(function(key){
@@ -708,22 +744,43 @@
     setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
   }
 
+  function markExported(keys){
+    keys.forEach(function(k){ exportedMap[k] = true; });
+    saveExported();
+    renderGrid();
+    renderSummary();
+  }
+
+  function checkPendingOrNotify(){
+    if(Object.keys(assignments).length === 0){
+      showStatus('まだシフトが登録されていません。上のカレンダーで日付を選択してください。', 'err');
+      return null;
+    }
+    var pending = getPendingKeys();
+    if(pending.length === 0){
+      showStatus('新しく追加・変更されたシフトはありません(すべて書き出し済みです)。', 'ok');
+      return null;
+    }
+    return pending;
+  }
+
   document.getElementById('exportBtn').addEventListener('click', function(){
-    var n = Object.keys(assignments).length;
-    if(n === 0){ showStatus('まだシフトが登録されていません。上のカレンダーで日付を選択してください。', 'err'); return; }
-    var ics = buildICS();
+    var pending = checkPendingOrNotify();
+    if(!pending) return;
+    var ics = buildICS(pending);
     try{
       downloadICS(ics, 'shift_calendar.ics');
-      showStatus('保存しました。下の手順(お使いの端末のタブ)に従ってGoogleカレンダーに追加してください。', 'ok');
+      markExported(pending);
+      showStatus('保存しました(新しく追加・変更した ' + pending.length + ' 件)。下の手順(お使いの端末のタブ)に従ってGoogleカレンダーに追加してください。', 'ok');
     }catch(err){
       showStatus('保存できませんでした。下の「内容をコピー」もお試しください。', 'err');
     }
   });
 
   document.getElementById('copyBtn').addEventListener('click', function(){
-    var n = Object.keys(assignments).length;
-    if(n === 0){ showStatus('まだシフトが登録されていません。上のカレンダーで日付を選択してください。', 'err'); return; }
-    var ics = buildICS();
+    var pending = checkPendingOrNotify();
+    if(!pending) return;
+    var ics = buildICS(pending);
     function fallbackCopy(text){
       var ta = document.createElement('textarea');
       ta.value = text;
@@ -738,15 +795,32 @@
     }
     if(navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(ics).then(function(){
-        showStatus('内容をコピーしました。メモアプリなどに貼り付け、拡張子 .ics で保存してください。', 'ok');
+        markExported(pending);
+        showStatus('内容をコピーしました(新しく追加・変更した ' + pending.length + ' 件)。メモアプリなどに貼り付け、拡張子 .ics で保存してください。', 'ok');
       }).catch(function(){
         var ok = fallbackCopy(ics);
+        if(ok) markExported(pending);
         showStatus(ok ? '内容をコピーしました。' : 'コピーできませんでした。', ok ? 'ok' : 'err');
       });
     } else {
       var ok = fallbackCopy(ics);
+      if(ok) markExported(pending);
       showStatus(ok ? '内容をコピーしました。' : 'コピーできませんでした。', ok ? 'ok' : 'err');
     }
+  });
+
+  document.getElementById('clearDoneBtn').addEventListener('click', function(){
+    var doneKeys = Object.keys(assignments).filter(function(k){ return exportedMap[k]; });
+    if(doneKeys.length === 0){
+      showStatus('書き出し済みのシフトはありません。', 'err');
+      return;
+    }
+    var ok = confirm('書き出し済みのシフト(' + doneKeys.length + '件)をこの端末から消去します。すでにファイルとして保存/コピー済みのはずですが、Googleカレンダーへの反映が済んでいるか先に確認してください。よろしいですか？');
+    if(!ok) return;
+    doneKeys.forEach(function(k){ delete assignments[k]; delete exportedMap[k]; });
+    saveAssignments(); saveExported();
+    renderGrid(); renderSummary();
+    showStatus('書き出し済みのシフト ' + doneKeys.length + ' 件を消去しました。', 'ok');
   });
 
   /* ---------------- init ---------------- */

@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>シフトカレンダー</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --paper:#f6f5f1;
+    --surface:#ffffff;
+    --surface-alt:#fbfaf7;
+    --ink:#23262b;
+    --ink-soft:#6b6f76;
+    --line:#e3e0d8;
+    --accent:#35508c;
+    --accent-soft:#e8edf7;
+    --accent-ink:#ffffff;
+    --danger:#b1443a;
+    --danger-soft:#f7e9e7;
+    --ok:#2f7a52;
+    --ok-soft:#e6f2ea;
+    --shadow-sm:0 1px 2px rgba(35,38,43,.07), 0 1px 1px rgba(35,38,43,.05);
+    --radius-lg:16px;
+    --radius-md:10px;
+    --radius-sm:7px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#15171b;
+      --surface:#1c1f24;
+      --surface-alt:#20232a;
+      --ink:#eceef1;
+      --ink-soft:#9a9fa8;
+      --line:#2c2f36;
+      --accent:#8aa6de;
+      --accent-soft:#232b3c;
+      --accent-ink:#10131a;
+      --danger:#e0897f;
+      --danger-soft:#3a2422;
+      --ok:#7fc79c;
+      --ok-soft:#1f3327;
+      --shadow-sm:0 1px 2px rgba(0,0,0,.5);
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Noto Sans JP','Hiragino Kaku Gothic ProN',sans-serif;
+    font-size:15.5px;
+    padding-inline:16px;
+    padding-block:22px;
+    max-width:640px;
+    margin-inline:auto;
+    line-height:1.65;
+  }
+  h1,h2,h3{
+    font-family:'Zen Kaku Gothic New','Noto Sans JP',sans-serif;
+    text-wrap:balance;
+    margin:0;
+  }
+  p{margin:0;}
+
+  header.top{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    margin-bottom:20px;
+    padding-bottom:16px;
+    border-bottom:1px solid var(--line);
+  }
+  header.top h1{font-size:24px;font-weight:900;letter-spacing:.01em;}
+  header.top .sub{color:var(--ink-soft);font-size:13.5px;}
+
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-sm);
+    padding:16px 16px 18px;
+    margin-bottom:16px;
+  }
+  .panel > h2{
+    font-size:15px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:12px;
+  }
+  .panel > h2 .badge-count{
+    font-family:'Noto Sans JP',sans-serif;
+    font-weight:500;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    background:var(--surface-alt);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:2px 9px;
+  }
+
+  .settings-toggle{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    background:transparent;
+    border:none;
+    padding:0;
+    cursor:pointer;
+    font:inherit;
+    color:inherit;
+    text-align:left;
+  }
+  .settings-toggle .hint{
+    display:block;
+    font-size:12px;
+    font-weight:400;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+  .settings-toggle .chev{
+    transition:transform .18s ease;
+    color:var(--ink-soft);
+    flex-shrink:0;
+  }
+  .settings-toggle[aria-expanded="true"] .chev{transform:rotate(90deg);}
+  #settingsBody{margin-top:14px;}
+  #settingsBody[hidden]{display:none;}
+
+  .type-row{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px 10px;
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:var(--radius-md);
+    background:var(--surface-alt);
+    margin-bottom:8px;
+  }
+  .type-row input[type="color"]{
+    width:32px;height:32px;padding:0;border:1px solid var(--line);border-radius:50%;
+    background:none;cursor:pointer;flex-shrink:0;
+  }
+  .type-row input[type="color"]::-webkit-color-swatch-wrapper{padding:2px;}
+  .type-row input[type="color"]::-webkit-color-swatch{border:none;border-radius:50%;}
+  .field-name{flex:1 1 96px;min-width:72px;}
+  .field-time{width:100px;flex:0 0 auto;}
+  label.chk{
+    display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink-soft);
+    flex:0 0 auto;white-space:nowrap;
+  }
+  .type-row input[type="text"],
+  .type-row input[type="time"]{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius-sm);
+    padding:8px 8px;
+    font:inherit;
+    font-size:14px;
+    color:var(--ink);
+    font-variant-numeric:tabular-nums;
+  }
+  .type-row input[type="text"]:focus,
+  .type-row input[type="time"]:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .type-row .del-btn{
+    margin-left:auto;
+    flex:0 0 auto;
+    width:30px;height:30px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:var(--surface);
+    color:var(--ink-soft);
+    cursor:pointer;
+    font-size:15px;
+    line-height:1;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .type-row .del-btn:hover{background:var(--danger-soft);color:var(--danger);border-color:var(--danger);}
+
+  .add-type-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--accent-soft);
+    color:var(--accent);
+    border:1px dashed var(--accent);
+    border-radius:var(--radius-md);
+    padding:9px 14px;
+    font:inherit;font-size:13px;font-weight:700;
+    cursor:pointer;
+    margin-top:2px;
+  }
+
+  .month-nav{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:14px;gap:8px;flex-wrap:wrap;
+  }
+  .month-nav .label{
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    font-size:19px;font-weight:700;
+    font-variant-numeric:tabular-nums;
+    min-width:140px;text-align:center;
+  }
+  .nav-btn{
+    width:38px;height:38px;border-radius:50%;
+    border:1px solid var(--line);background:var(--surface);
+    color:var(--ink);font-size:16px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .nav-btn:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+  .today-btn{
+    border:1px solid var(--line);background:var(--surface);
+    border-radius:999px;padding:8px 14px;font:inherit;font-size:12.5px;
+    color:var(--ink-soft);cursor:pointer;
+  }
+
+  .weekday-row,.day-grid{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:5px;
+  }
+  .weekday-row{margin-bottom:6px;}
+  .weekday-row span{
+    text-align:center;font-size:11px;font-weight:700;color:var(--ink-soft);
+    padding-block:2px;
+  }
+  .weekday-row span.sun{color:#c05a4e;}
+  .weekday-row span.sat{color:#3d6bbf;}
+  @media (prefers-color-scheme: dark){
+    .weekday-row span.sun{color:#e58a7c;}
+    .weekday-row span.sat{color:#7fa2e8;}
+    .day-cell.sun .num{color:#e58a7c;}
+    .day-cell.sat .num{color:#7fa2e8;}
+  }
+
+  .day-cell{
+    min-height:64px;
+    border:1px solid var(--line);
+    border-left:3px solid var(--line);
+    border-radius:var(--radius-sm);
+    background:var(--surface-alt);
+    padding:5px 4px 4px;
+    display:flex;flex-direction:column;gap:4px;
+  }
+  .day-cell.blank{background:transparent;border-color:transparent;border-left-color:transparent;}
+  .day-cell .num{
+    font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;
+    color:var(--ink-soft);
+  }
+  .day-cell.today .num{
+    color:var(--accent-ink);
+    background:var(--accent);
+    width:18px;height:18px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .day-cell.sun .num{color:#c05a4e;}
+  .day-cell.sat .num{color:#3d6bbf;}
+  .day-cell select{
+    width:100%;
+    font:inherit;font-size:11px;
+    background:transparent;
+    border:none;
+    color:var(--ink);
+    padding:2px 0;
+    appearance:none;
+    -webkit-appearance:none;
+    cursor:pointer;
+  }
+  .day-cell select:focus{outline:2px solid var(--accent);outline-offset:1px;border-radius:3px;}
+  @media (max-width:420px){
+    .day-cell{min-height:56px;}
+    .day-cell select{font-size:9.5px;}
+  }
+
+  .summary-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;
+    border:1px solid var(--line);
+    background:var(--surface-alt);
+    border-radius:999px;
+    padding:6px 12px 6px 9px;
+    font-size:12.5px;
+  }
+  .chip .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .chip .n{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink-soft);}
+  .empty-note{color:var(--ink-soft);font-size:13px;}
+
+  .steps{
+    margin:0 0 16px;
+    padding-left:20px;
+    font-size:13.5px;
+    color:var(--ink-soft);
+    display:flex;flex-direction:column;gap:7px;
+  }
+  .steps li::marker{color:var(--accent);font-weight:700;}
+  .steps b{color:var(--ink);font-weight:700;}
+  .device-tabs{display:flex;gap:6px;margin-bottom:10px;}
+  .device-tab{
+    flex:1;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--line);
+    background:var(--surface-alt);font:inherit;font-size:12.5px;font-weight:700;color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .device-tab.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent);}
+  .device-panel[hidden]{display:none;}
+
+  .export-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  button.primary{
+    background:var(--accent);color:var(--accent-ink);
+    border:none;border-radius:var(--radius-md);
+    padding:14px 22px;font:inherit;font-size:15px;font-weight:700;
+    cursor:pointer;box-shadow:var(--shadow-sm);
+    width:100%;
+  }
+  button.primary:hover{filter:brightness(1.06);}
+  button.ghost{
+    background:var(--surface);color:var(--ink);
+    border:1px solid var(--line);border-radius:var(--radius-md);
+    padding:11px 16px;font:inherit;font-size:13.5px;font-weight:600;
+    cursor:pointer;
+    width:100%;
+  }
+  button.ghost:hover{border-color:var(--accent);color:var(--accent);}
+  .status-msg{
+    margin-top:12px;padding:10px 13px;border-radius:var(--radius-sm);
+    font-size:13px;display:none;
+  }
+  .status-msg.show{display:block;}
+  .status-msg.ok{background:var(--ok-soft);color:var(--ok);}
+  .status-msg.err{background:var(--danger-soft);color:var(--danger);}
+
+  .caution{
+    background:var(--accent-soft);color:var(--ink);border:1px solid var(--line);
+    border-radius:var(--radius-md);padding:10px 12px;font-size:12.5px;color:var(--ink-soft);
+    margin-bottom:14px;
+  }
+
+  footer.note{
+    color:var(--ink-soft);font-size:11.5px;text-align:center;margin-top:4px;
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>シフトカレンダー</h1>
+  <p class="sub">日付ごとにシフトを選んで、Googleカレンダーに追加する予定ファイルを作ります。</p>
+</header>
+
+<div class="caution">
+  このページはこの端末の中だけで動きます(インターネットに送信されません)。入力内容はこの画面を閉じても端末に保存されますが、確実に残すため<b>入力が終わったらすぐ下の「保存する」を押してください</b>。
+</div>
+
+<section class="panel" id="settingsPanel">
+  <button class="settings-toggle" id="settingsToggle" aria-expanded="false" aria-controls="settingsBody">
+    <span>
+      <h2 style="margin:0;display:inline-flex;align-items:center;gap:8px;">勤務時間の設定 <span class="badge-count" id="typeCountBadge">6種類</span></h2>
+      <span class="hint">すでに入力されています。通常は変更しなくて大丈夫です。</span>
+    </span>
+    <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+  </button>
+  <div id="settingsBody" hidden>
+    <div id="typeList"></div>
+    <button class="add-type-btn" id="addTypeBtn" type="button">＋ 勤務種別を追加</button>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="month-nav">
+    <button class="nav-btn" id="prevMonth" aria-label="前の月" type="button">‹</button>
+    <span class="label" id="monthLabel"></span>
+    <button class="nav-btn" id="nextMonth" aria-label="次の月" type="button">›</button>
+    <button class="today-btn" id="gotoToday" type="button">今月</button>
+  </div>
+  <div class="weekday-row">
+    <span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span>
+  </div>
+  <div class="day-grid" id="dayGrid"></div>
+</section>
+
+<section class="panel">
+  <h2>今月の内訳</h2>
+  <div class="summary-row" id="summaryRow"></div>
+</section>
+
+<section class="panel">
+  <h2>Googleカレンダーに追加する</h2>
+  <div class="export-row">
+    <button class="primary" id="exportBtn" type="button">① 予定ファイルを保存する</button>
+  </div>
+  <div class="status-msg" id="statusMsg"></div>
+
+  <div class="device-tabs">
+    <button class="device-tab active" data-device="iphone" type="button">iPhoneの場合</button>
+    <button class="device-tab" data-device="android" type="button">Androidの場合</button>
+    <button class="device-tab" data-device="pc" type="button">パソコンの場合</button>
+  </div>
+
+  <div class="device-panel" data-device="iphone">
+    <ol class="steps">
+      <li>保存した <b>shift_calendar.ics</b> を通知または「ファイル」アプリから<b>タップして開く</b>。</li>
+      <li>「カレンダーに追加」画面が出るので、追加先のカレンダーを<b>「Google」</b>に選び、右上の<b>追加</b>をタップ。</li>
+      <li>「Google」が選べない場合は、先に設定アプリの「カレンダー」＞「アカウント」からGoogleアカウントを追加してください。</li>
+    </ol>
+  </div>
+  <div class="device-panel" data-device="android" hidden>
+    <ol class="steps">
+      <li>保存した <b>shift_calendar.ics</b> を通知または「ファイル」アプリから<b>タップして開く</b>。</li>
+      <li>「Googleカレンダーで開く」を選ぶと予定の一覧が表示されるので、内容を確認して<b>インポート</b>をタップ。</li>
+      <li>候補に出ない場合は、Googleカレンダーアプリを開き、右上メニューから「設定」を探してファイルを選択してください。</li>
+    </ol>
+  </div>
+  <div class="device-panel" data-device="pc" hidden>
+    <ol class="steps">
+      <li>保存した <b>shift_calendar.ics</b> の場所を覚えておく(通常は「ダウンロード」フォルダ)。</li>
+      <li><a href="https://calendar.google.com/calendar/u/0/r/settings/export" target="_blank" rel="noopener">Googleカレンダーの読み込み画面</a>を開く(設定 ＞ 読み込み/エクスポート ＞ 読み込む でも同じ画面です)。</li>
+      <li>「パソコンからファイルを選択」で <b>shift_calendar.ics</b> を選び、追加先カレンダーを選んで「読み込む」をクリック。</li>
+    </ol>
+  </div>
+
+  <button class="ghost" id="copyBtn" type="button" style="margin-top:10px;">うまく開けないときは内容をコピー(予備の方法)</button>
+  <p class="empty-note" id="eventCountNote" style="margin-top:8px;"></p>
+</section>
+
+<footer class="note">全期間の登録済みシフトがまとめてファイルに書き出されます。</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  var TYPES_KEY = 'shiftcal_types_v1';
+  var ASSIGN_KEY = 'shiftcal_assignments_v1';
+  var VIEW_KEY = 'shiftcal_view_v1';
+
+  var DEFAULT_TYPES = [
+    {id:'day',       name:'日',   start:'08:30', end:'17:30', allDay:false, color:'#35508c'},
+    {id:'day1',      name:'日①', start:'08:00', end:'17:00', allDay:false, color:'#4f86c6'},
+    {id:'late',      name:'遅',   start:'10:00', end:'19:00', allDay:false, color:'#c1791f'},
+    {id:'night_in',  name:'入り', start:'15:00', end:'00:00', allDay:false, color:'#8a3f78'},
+    {id:'night_out', name:'明け', start:'00:00', end:'10:00', allDay:false, color:'#6b7280'},
+    {id:'off',       name:'休み', start:'',      end:'',      allDay:true,  color:'#2f8f5b'}
+  ];
+
+  function safeGet(key, fallback){
+    try{
+      var raw = localStorage.getItem(key);
+      if(raw === null) return fallback;
+      return JSON.parse(raw);
+    }catch(e){ return fallback; }
+  }
+  function safeSet(key, value){
+    try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){}
+  }
+
+  var shiftTypes = safeGet(TYPES_KEY, null) || DEFAULT_TYPES.map(function(t){return Object.assign({}, t);});
+  var assignments = safeGet(ASSIGN_KEY, null) || {};
+  var view = safeGet(VIEW_KEY, null);
+  var today = new Date();
+  var curYear = (view && view.y) || today.getFullYear();
+  var curMonth = (view && view.m) || (today.getMonth() + 1);
+
+  function saveTypes(){ safeSet(TYPES_KEY, shiftTypes); }
+  function saveAssignments(){ safeSet(ASSIGN_KEY, assignments); }
+  function saveView(){ safeSet(VIEW_KEY, {y:curYear, m:curMonth}); }
+
+  function uid(){
+    if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 't' + Date.now() + Math.random().toString(16).slice(2);
+  }
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function dateKey(y,m,d){ return y + '-' + pad2(m) + '-' + pad2(d); }
+
+  /* ---------------- settings panel ---------------- */
+  var settingsToggle = document.getElementById('settingsToggle');
+  var settingsBody = document.getElementById('settingsBody');
+  settingsToggle.addEventListener('click', function(){
+    var open = settingsToggle.getAttribute('aria-expanded') === 'true';
+    settingsToggle.setAttribute('aria-expanded', String(!open));
+    settingsBody.hidden = open;
+  });
+
+  var typeList = document.getElementById('typeList');
+  var typeCountBadge = document.getElementById('typeCountBadge');
+
+  function renderTypeList(){
+    typeList.innerHTML = '';
+    shiftTypes.forEach(function(t){
+      var row = document.createElement('div');
+      row.className = 'type-row';
+
+      var color = document.createElement('input');
+      color.type = 'color'; color.value = t.color; color.id = 'color-' + t.id;
+      color.title = '色';
+      color.addEventListener('input', function(){ t.color = color.value; saveTypes(); renderGrid(); renderSummary(); });
+
+      var name = document.createElement('input');
+      name.type = 'text'; name.value = t.name; name.className = 'field-name'; name.id = 'name-' + t.id;
+      name.placeholder = '名前';
+      name.addEventListener('input', function(){ t.name = name.value; saveTypes(); renderGrid(); renderSummary(); });
+
+      var startWrap = document.createElement('input');
+      startWrap.type = 'time'; startWrap.value = t.start || ''; startWrap.className = 'field-time'; startWrap.id = 'start-' + t.id;
+      startWrap.disabled = !!t.allDay;
+      startWrap.addEventListener('input', function(){ t.start = startWrap.value; saveTypes(); });
+
+      var toLabel = document.createElement('span');
+      toLabel.textContent = '〜'; toLabel.style.color = 'var(--ink-soft)'; toLabel.style.fontSize = '12px';
+
+      var endWrap = document.createElement('input');
+      endWrap.type = 'time'; endWrap.value = t.end || ''; endWrap.className = 'field-time'; endWrap.id = 'end-' + t.id;
+      endWrap.disabled = !!t.allDay;
+      endWrap.addEventListener('input', function(){ t.end = endWrap.value; saveTypes(); });
+
+      var allDayLabel = document.createElement('label');
+      allDayLabel.className = 'chk';
+      var allDayChk = document.createElement('input');
+      allDayChk.type = 'checkbox'; allDayChk.checked = !!t.allDay; allDayChk.id = 'allday-' + t.id;
+      allDayChk.addEventListener('change', function(){
+        t.allDay = allDayChk.checked;
+        startWrap.disabled = t.allDay; endWrap.disabled = t.allDay;
+        saveTypes();
+      });
+      allDayLabel.appendChild(allDayChk);
+      allDayLabel.appendChild(document.createTextNode('終日'));
+
+      var del = document.createElement('button');
+      del.type = 'button'; del.className = 'del-btn'; del.innerHTML = '×'; del.title = 'この種別を削除';
+      del.addEventListener('click', function(){
+        if(shiftTypes.length <= 1){ return; }
+        var ok = confirm('「' + t.name + '」を削除します。この種別が割り当てられた日は未設定に戻ります。よろしいですか？');
+        if(!ok) return;
+        shiftTypes = shiftTypes.filter(function(x){ return x.id !== t.id; });
+        Object.keys(assignments).forEach(function(k){ if(assignments[k] === t.id) delete assignments[k]; });
+        saveTypes(); saveAssignments();
+        renderTypeList(); renderGrid(); renderSummary();
+      });
+
+      row.appendChild(color);
+      row.appendChild(name);
+      row.appendChild(startWrap);
+      row.appendChild(toLabel);
+      row.appendChild(endWrap);
+      row.appendChild(allDayLabel);
+      row.appendChild(del);
+      typeList.appendChild(row);
+    });
+    typeCountBadge.textContent = shiftTypes.length + '種類';
+  }
+
+  document.getElementById('addTypeBtn').addEventListener('click', function(){
+    shiftTypes.push({id: uid(), name:'新しい種別', start:'09:00', end:'18:00', allDay:false, color:'#7a7a7a'});
+    saveTypes();
+    renderTypeList();
+    renderGrid();
+  });
+
+  /* ---------------- calendar ---------------- */
+  var monthLabel = document.getElementById('monthLabel');
+  var dayGrid = document.getElementById('dayGrid');
+
+  function typeById(id){
+    for(var i=0;i<shiftTypes.length;i++){ if(shiftTypes[i].id === id) return shiftTypes[i]; }
+    return null;
+  }
+  function hexToRgba(hex, alpha){
+    var h = hex.replace('#','');
+    if(h.length === 3){ h = h.split('').map(function(c){return c+c;}).join(''); }
+    var r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+    if(isNaN(r)||isNaN(g)||isNaN(b)) return 'transparent';
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+  }
+
+  function renderGrid(){
+    monthLabel.textContent = curYear + '年 ' + curMonth + '月';
+    dayGrid.innerHTML = '';
+
+    var firstDow = new Date(curYear, curMonth - 1, 1).getDay();
+    var daysInMonth = new Date(curYear, curMonth, 0).getDate();
+    var todayKey = dateKey(today.getFullYear(), today.getMonth()+1, today.getDate());
+
+    for(var i=0;i<firstDow;i++){
+      var blank = document.createElement('div');
+      blank.className = 'day-cell blank';
+      dayGrid.appendChild(blank);
+    }
+
+    for(var d=1; d<=daysInMonth; d++){
+      var key = dateKey(curYear, curMonth, d);
+      var dow = new Date(curYear, curMonth - 1, d).getDay();
+      var cell = document.createElement('div');
+      cell.className = 'day-cell' + (dow===0?' sun':'') + (dow===6?' sat':'') + (key===todayKey?' today':'');
+
+      var num = document.createElement('div');
+      num.className = 'num';
+      num.textContent = String(d);
+      cell.appendChild(num);
+
+      var select = document.createElement('select');
+      select.id = 'day-' + key;
+      var noneOpt = document.createElement('option');
+      noneOpt.value = ''; noneOpt.textContent = '－';
+      select.appendChild(noneOpt);
+      shiftTypes.forEach(function(t){
+        var opt = document.createElement('option');
+        opt.value = t.id; opt.textContent = t.name;
+        select.appendChild(opt);
+      });
+      select.value = assignments[key] || '';
+
+      (function(key, cell, select){
+        select.addEventListener('change', function(){
+          if(select.value){ assignments[key] = select.value; } else { delete assignments[key]; }
+          saveAssignments();
+          applyCellTint(cell, select.value);
+          renderSummary();
+        });
+      })(key, cell, select);
+
+      cell.appendChild(select);
+      applyCellTint(cell, select.value);
+      dayGrid.appendChild(cell);
+    }
+  }
+
+  function applyCellTint(cell, typeId){
+    var t = typeId ? typeById(typeId) : null;
+    if(t){
+      cell.style.background = hexToRgba(t.color, 0.16);
+      cell.style.borderLeftColor = t.color;
+    } else {
+      cell.style.background = 'var(--surface-alt)';
+      cell.style.borderLeftColor = 'var(--line)';
+    }
+  }
+
+  document.getElementById('prevMonth').addEventListener('click', function(){
+    curMonth--; if(curMonth < 1){ curMonth = 12; curYear--; }
+    saveView(); renderGrid(); renderSummary();
+  });
+  document.getElementById('nextMonth').addEventListener('click', function(){
+    curMonth++; if(curMonth > 12){ curMonth = 1; curYear++; }
+    saveView(); renderGrid(); renderSummary();
+  });
+  document.getElementById('gotoToday').addEventListener('click', function(){
+    curYear = today.getFullYear(); curMonth = today.getMonth()+1;
+    saveView(); renderGrid(); renderSummary();
+  });
+
+  /* ---------------- summary ---------------- */
+  var summaryRow = document.getElementById('summaryRow');
+  function renderSummary(){
+    summaryRow.innerHTML = '';
+    var counts = {};
+    var prefix = curYear + '-' + pad2(curMonth) + '-';
+    Object.keys(assignments).forEach(function(k){
+      if(k.indexOf(prefix) === 0){
+        var tid = assignments[k];
+        counts[tid] = (counts[tid]||0) + 1;
+      }
+    });
+    var any = false;
+    shiftTypes.forEach(function(t){
+      if(!counts[t.id]) return;
+      any = true;
+      var chip = document.createElement('span');
+      chip.className = 'chip';
+      var dot = document.createElement('span');
+      dot.className = 'dot'; dot.style.background = t.color;
+      var label = document.createElement('span');
+      label.textContent = t.name;
+      var n = document.createElement('span');
+      n.className = 'n'; n.textContent = counts[t.id] + '日';
+      chip.appendChild(dot); chip.appendChild(label); chip.appendChild(n);
+      summaryRow.appendChild(chip);
+    });
+    if(!any){
+      var empty = document.createElement('span');
+      empty.className = 'empty-note';
+      empty.textContent = 'この月にはまだシフトが登録されていません。上のカレンダーの日付から選んでください。';
+      summaryRow.appendChild(empty);
+    }
+    updateEventCountNote();
+  }
+
+  function updateEventCountNote(){
+    var note = document.getElementById('eventCountNote');
+    var n = Object.keys(assignments).length;
+    note.textContent = n > 0 ? ('全期間で ' + n + ' 件のシフトが登録されています') : '全期間でまだシフトが登録されていません';
+  }
+
+  /* ---------------- device tabs ---------------- */
+  var deviceTabs = document.querySelectorAll('.device-tab');
+  var devicePanels = document.querySelectorAll('.device-panel');
+  deviceTabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      deviceTabs.forEach(function(x){ x.classList.remove('active'); });
+      tab.classList.add('active');
+      var dev = tab.getAttribute('data-device');
+      devicePanels.forEach(function(p){ p.hidden = p.getAttribute('data-device') !== dev; });
+    });
+  });
+
+  /* ---------------- ICS export ---------------- */
+  function escapeICS(text){
+    return String(text).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+  }
+  function addDays(y,m,d,delta){
+    var dt = new Date(y, m-1, d);
+    dt.setDate(dt.getDate() + delta);
+    return {y:dt.getFullYear(), m:dt.getMonth()+1, d:dt.getDate()};
+  }
+  function stamp(){
+    var n = new Date();
+    return n.getUTCFullYear() + pad2(n.getUTCMonth()+1) + pad2(n.getUTCDate()) + 'T' +
+      pad2(n.getUTCHours()) + pad2(n.getUTCMinutes()) + pad2(n.getUTCSeconds()) + 'Z';
+  }
+
+  function buildICS(){
+    var lines = [];
+    lines.push('BEGIN:VCALENDAR');
+    lines.push('VERSION:2.0');
+    lines.push('PRODID:-//ShiftCalendar//JP');
+    lines.push('CALSCALE:GREGORIAN');
+    lines.push('METHOD:PUBLISH');
+    lines.push('BEGIN:VTIMEZONE');
+    lines.push('TZID:Asia/Tokyo');
+    lines.push('BEGIN:STANDARD');
+    lines.push('DTSTART:19700101T000000');
+    lines.push('TZOFFSETFROM:+0900');
+    lines.push('TZOFFSETTO:+0900');
+    lines.push('TZNAME:JST');
+    lines.push('END:STANDARD');
+    lines.push('END:VTIMEZONE');
+
+    var keys = Object.keys(assignments).sort();
+    var dtstamp = stamp();
+
+    keys.forEach(function(key){
+      var t = typeById(assignments[key]);
+      if(!t) return;
+      var parts = key.split('-').map(Number);
+      var y = parts[0], m = parts[1], d = parts[2];
+
+      lines.push('BEGIN:VEVENT');
+      lines.push('UID:' + key.replace(/-/g,'') + '-' + t.id + '@shift-calendar.local');
+      lines.push('DTSTAMP:' + dtstamp);
+      lines.push('SUMMARY:' + escapeICS(t.name));
+
+      if(t.allDay || !t.start || !t.end){
+        var next = addDays(y,m,d,1);
+        lines.push('DTSTART;VALUE=DATE:' + y + pad2(m) + pad2(d));
+        lines.push('DTEND;VALUE=DATE:' + next.y + pad2(next.m) + pad2(next.d));
+        lines.push('DESCRIPTION:' + escapeICS(t.name));
+      } else {
+        var sParts = t.start.split(':').map(Number);
+        var eParts = t.end.split(':').map(Number);
+        var startMinutes = sParts[0]*60 + sParts[1];
+        var endMinutes = eParts[0]*60 + eParts[1];
+        var endDate = {y:y,m:m,d:d};
+        if(endMinutes <= startMinutes){ endDate = addDays(y,m,d,1); }
+        lines.push('DTSTART;TZID=Asia/Tokyo:' + y + pad2(m) + pad2(d) + 'T' + pad2(sParts[0]) + pad2(sParts[1]) + '00');
+        lines.push('DTEND;TZID=Asia/Tokyo:' + endDate.y + pad2(endDate.m) + pad2(endDate.d) + 'T' + pad2(eParts[0]) + pad2(eParts[1]) + '00');
+        lines.push('DESCRIPTION:' + escapeICS(t.start + '〜' + t.end));
+      }
+      lines.push('END:VEVENT');
+    });
+
+    lines.push('END:VCALENDAR');
+    return lines.join('\r\n');
+  }
+
+  var statusMsg = document.getElementById('statusMsg');
+  function showStatus(text, kind){
+    statusMsg.textContent = text;
+    statusMsg.className = 'status-msg show ' + (kind === 'ok' ? 'ok' : 'err');
+  }
+
+  function downloadICS(text, filename){
+    var blob = new Blob([text], {type:'text/calendar;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+  }
+
+  document.getElementById('exportBtn').addEventListener('click', function(){
+    var n = Object.keys(assignments).length;
+    if(n === 0){ showStatus('まだシフトが登録されていません。上のカレンダーで日付を選択してください。', 'err'); return; }
+    var ics = buildICS();
+    try{
+      downloadICS(ics, 'shift_calendar.ics');
+      showStatus('保存しました。下の手順(お使いの端末のタブ)に従ってGoogleカレンダーに追加してください。', 'ok');
+    }catch(err){
+      showStatus('保存できませんでした。下の「内容をコピー」もお試しください。', 'err');
+    }
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', function(){
+    var n = Object.keys(assignments).length;
+    if(n === 0){ showStatus('まだシフトが登録されていません。上のカレンダーで日付を選択してください。', 'err'); return; }
+    var ics = buildICS();
+    function fallbackCopy(text){
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      var ok = false;
+      try{ ok = document.execCommand('copy'); }catch(e){ ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(ics).then(function(){
+        showStatus('内容をコピーしました。メモアプリなどに貼り付け、拡張子 .ics で保存してください。', 'ok');
+      }).catch(function(){
+        var ok = fallbackCopy(ics);
+        showStatus(ok ? '内容をコピーしました。' : 'コピーできませんでした。', ok ? 'ok' : 'err');
+      });
+    } else {
+      var ok = fallbackCopy(ics);
+      showStatus(ok ? '内容をコピーしました。' : 'コピーできませんでした。', ok ? 'ok' : 'err');
+    }
+  });
+
+  /* ---------------- init ---------------- */
+  renderTypeList();
+  renderGrid();
+  renderSummary();
+})();
+</script>
+</body>
+</html>

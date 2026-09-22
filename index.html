@@ -287,6 +287,15 @@
   }
   .device-tab.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent);}
   .device-panel[hidden]{display:none;}
+  .guide-scroll{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    border:1px solid var(--line);
+    border-radius:var(--radius-md);
+    margin-top:12px;
+    background:#f4f4f2;
+  }
+  .guide-scroll img{display:block;max-width:none;}
 
   .export-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
   button.primary{
@@ -381,16 +390,16 @@
   </div>
 
   <div class="device-panel" data-device="iphone">
-    <div class="caution" style="margin-bottom:12px;">
-      Google カレンダーの<b>アプリ自体には読み込み機能がありません</b>。iPhoneでは次の準備が必要です:<br>
-      「設定」＞「カレンダー」＞「アカウント」＞「アカウントを追加」から<b>Googleアカウントを追加</b>しておいてください(初回だけ)。
-    </div>
     <ol class="steps">
-      <li>保存した <b>shift_calendar.ics</b> を通知または「ファイル」アプリから<b>タップして開く</b>。</li>
-      <li>「カレンダーに追加」画面が出るので、追加先のカレンダーを<b>「Google」</b>に選び、右上の<b>追加</b>をタップ。</li>
-      <li>これで、iPhone標準のカレンダーアプリにもGoogleカレンダーのアプリ・Web版にも反映されます。</li>
+      <li>カレンダーで日付ごとにシフトを選び、<b>「①予定ファイルを保存する」</b>を押す。</li>
+      <li>保存された <b>shift_calendar.ics</b> をタップして開く。予定の一覧が出るので内容を確認し、右上の<b>「追加」</b>をタップ。</li>
+      <li>「カレンダー」の選択画面になるので、<b>「Gmail」の下にある、自分の@gmail.comで終わるカレンダー</b>を選んで、右上の<b>✓</b>をタップ。</li>
     </ol>
-    <p class="empty-note">うまく「Google」が選べない場合は、Safariで <b>calendar.google.com</b> を開き、画面下部などから「デスクトップ用Webサイトを表示」に切り替えて、設定＞読み込み/エクスポート＞読み込む から同じファイルをアップロードしてください。</p>
+    <p class="empty-note">※「Gmail」が表示されない場合は、先に「設定」＞「カレンダー」＞「アカウント」＞「アカウントを追加」からGoogleアカウントを追加してください(初回だけ)。</p>
+    <div class="guide-scroll">
+      <img src="iphone-guide.svg" alt="iPhoneでの操作イメージ" width="900">
+    </div>
+    <p class="empty-note">↑ 横にスクロールできます(実機のスクリーンショットを元にした挿絵です)</p>
   </div>
   <div class="device-panel" data-device="android" hidden>
     <ol class="steps">

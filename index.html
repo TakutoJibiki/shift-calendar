@@ -378,6 +378,7 @@
 
 <section class="panel">
   <h2>Googleカレンダーに追加する</h2>
+  <p class="empty-note" id="exportMonthNote" style="margin-bottom:8px;"></p>
   <div class="export-row">
     <button class="primary" id="exportBtn" type="button">① 予定ファイルを保存する</button>
   </div>
@@ -391,7 +392,7 @@
 
   <div class="device-panel" data-device="iphone">
     <ol class="steps">
-      <li>カレンダーで日付ごとにシフトを選び、<b>「①予定ファイルを保存する」</b>を押す。</li>
+      <li>カレンダーで日付ごとにシフトを選び、<b>「①予定ファイルを保存する」</b>を押す(表示している月の分がすべて保存されます)。</li>
       <li>保存された <b>shift_calendar.ics</b> をタップして開く。予定の一覧が出るので内容を確認し、右上の<b>「追加」</b>をタップ。</li>
       <li>「カレンダー」の選択画面になるので、<b>「Gmail」の下にある、自分の@gmail.comで終わるカレンダー</b>を選んで、右上の<b>✓</b>をタップ。</li>
     </ol>
@@ -421,7 +422,7 @@
   <p class="empty-note" id="eventCountNote" style="margin-top:8px;"></p>
 </section>
 
-<footer class="note">全期間の登録済みシフトがまとめてファイルに書き出されます。</footer>
+<footer class="note">表示中の月のシフトが、書き出し済みかどうかに関係なくすべてファイルに書き出されます。</footer>
 
 <script>
 (function(){
@@ -641,6 +642,8 @@
   }
 
   function updateEventCountNote(){
+    document.getElementById('exportMonthNote').textContent =
+      '保存されるのは「' + curYear + '年' + curMonth + '月」のシフト ' + getMonthKeys().length + ' 件です(月は上のカレンダーで切り替え)。';
     var note = document.getElementById('eventCountNote');
     var n = Object.keys(assignments).length;
     var pendingN = getPendingKeys().length;
@@ -760,36 +763,37 @@
     renderSummary();
   }
 
-  function checkPendingOrNotify(){
-    if(Object.keys(assignments).length === 0){
-      showStatus('まだシフトが登録されていません。上のカレンダーで日付を選択してください。', 'err');
+  function getMonthKeys(){
+    var prefix = curYear + '-' + pad2(curMonth) + '-';
+    return Object.keys(assignments).filter(function(k){ return k.indexOf(prefix) === 0; }).sort();
+  }
+
+  function monthKeysOrNotify(){
+    var keys = getMonthKeys();
+    if(keys.length === 0){
+      showStatus(curYear + '年' + curMonth + '月にはシフトが登録されていません。月を切り替えるか、カレンダーで日付を選択してください。', 'err');
       return null;
     }
-    var pending = getPendingKeys();
-    if(pending.length === 0){
-      showStatus('新しく追加・変更されたシフトはありません(すべて書き出し済みです)。', 'ok');
-      return null;
-    }
-    return pending;
+    return keys;
   }
 
   document.getElementById('exportBtn').addEventListener('click', function(){
-    var pending = checkPendingOrNotify();
-    if(!pending) return;
-    var ics = buildICS(pending);
+    var keys = monthKeysOrNotify();
+    if(!keys) return;
+    var ics = buildICS(keys);
     try{
       downloadICS(ics, 'shift_calendar.ics');
-      markExported(pending);
-      showStatus('保存しました(新しく追加・変更した ' + pending.length + ' 件)。下の手順(お使いの端末のタブ)に従ってGoogleカレンダーに追加してください。', 'ok');
+      markExported(keys);
+      showStatus('保存しました(' + curYear + '年' + curMonth + '月分 ' + keys.length + ' 件)。下の手順(お使いの端末のタブ)に従ってGoogleカレンダーに追加してください。', 'ok');
     }catch(err){
       showStatus('保存できませんでした。下の「内容をコピー」もお試しください。', 'err');
     }
   });
 
   document.getElementById('copyBtn').addEventListener('click', function(){
-    var pending = checkPendingOrNotify();
-    if(!pending) return;
-    var ics = buildICS(pending);
+    var keys = monthKeysOrNotify();
+    if(!keys) return;
+    var ics = buildICS(keys);
     function fallbackCopy(text){
       var ta = document.createElement('textarea');
       ta.value = text;
@@ -804,16 +808,16 @@
     }
     if(navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(ics).then(function(){
-        markExported(pending);
-        showStatus('内容をコピーしました(新しく追加・変更した ' + pending.length + ' 件)。メモアプリなどに貼り付け、拡張子 .ics で保存してください。', 'ok');
+        markExported(keys);
+        showStatus('内容をコピーしました(' + curYear + '年' + curMonth + '月分 ' + keys.length + ' 件)。メモアプリなどに貼り付け、拡張子 .ics で保存してください。', 'ok');
       }).catch(function(){
         var ok = fallbackCopy(ics);
-        if(ok) markExported(pending);
+        if(ok) markExported(keys);
         showStatus(ok ? '内容をコピーしました。' : 'コピーできませんでした。', ok ? 'ok' : 'err');
       });
     } else {
       var ok = fallbackCopy(ics);
-      if(ok) markExported(pending);
+      if(ok) markExported(keys);
       showStatus(ok ? '内容をコピーしました。' : 'コピーできませんでした。', ok ? 'ok' : 'err');
     }
   });
